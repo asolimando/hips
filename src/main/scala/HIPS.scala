@@ -2,9 +2,8 @@ import PntPackage.Pnt
 
 import scala.collection.mutable.{ListBuffer, Map, TreeSet}
 import scala.util.Random
-
-import breeze.linalg._
 import breeze.plot._
+import java.awt.Color
 
 package object PntPackage {
   type Pnt = Point[Int, Double]
@@ -33,7 +32,7 @@ object HIPS {
   }
 
   def exec(): Unit ={
-    val points: Seq[Pnt] = (1 to 5).map(_ => generatePoint(100,100,10.0))
+    val points: Seq[Pnt] = (1 to 8).map(_ => generatePoint(100,100,10.0))
     /*    Seq(
           new Point(0, 1, 2.0),
           new Point(0, 0, 1.0),
@@ -51,9 +50,45 @@ object HIPS {
 
     val p = f1.subplot(0)// += image(DenseMatrix.rand(200,200))
 
-    p += plot(M.points.map(_.x).toSeq, M.points.map(_.y).toSeq)
+    def weightFunc(s: collection.AbstractSeq[Pnt]): (Int => Double) = {
+      ((x: Int) => s.map(_.w).zipWithIndex.map(_.swap).toMap.getOrElse(x, 0.0) / 2.0)
+    }
 
-    p += plot(solution.map(_.x), solution.map(_.y))
+    val allPoints = points.filterNot((solution ++ M.points.toList).contains(_)).toList
+
+    val all = scatter(
+      allPoints.map(_.x),
+      allPoints.map(_.y),
+      weightFunc(allPoints),
+      ((x: Int) => Color.BLACK)
+    )
+
+    p += all
+
+    val common: TreeSet[Pnt] = M.points.intersect(solution.toSet)
+    val computed: TreeSet[Pnt] = M.points.filterNot(common.contains(_))
+    val bruteforce = solution.filterNot(common.contains(_))
+
+    p += scatter(
+      computed.map(_.x).toSeq,
+      computed.map(_.y).toSeq,
+      weightFunc(computed.toList),
+      (x: Int) => Color.BLUE
+    )
+
+    p += scatter(
+      bruteforce.map(_.x),
+      bruteforce.map(_.y),
+      weightFunc(bruteforce),
+      (x: Int) => Color.RED
+    )
+
+    p += scatter(
+      common.map(_.x).toSeq,
+      common.map(_.y).toSeq,
+      weightFunc(common.toList),
+      (x: Int) => Color.GREEN
+    )
 
     p.refresh()
 
