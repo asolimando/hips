@@ -19,7 +19,9 @@ object HIPS {
   val XYtree = TreeSet.empty(pointOrderingXY)
   val YXtree = TreeSet.empty(pointOrderingYX)
 
-  val rnd = new Random(10)
+  val rnd = new Random(12)
+
+  var err = 0
 
   def generatePoint(maxX: Int = Int.MaxValue,
                     maxY: Int = Int.MaxValue,
@@ -28,11 +30,13 @@ object HIPS {
   }
 
   def main(args: Array[String]): Unit = {
-    for(i <- 1 to 1000) exec()
+    for(i <- 1 to 5) exec()
+
+    println(err)
   }
 
   def exec(): Unit ={
-    val points: Seq[Pnt] = (1 to 8).map(_ => generatePoint(100,100,10.0))
+    val points: Seq[Pnt] = (1 to 5).map(_ => generatePoint(100,100,10.0))
     /*    Seq(
           new Point(0, 1, 2.0),
           new Point(0, 0, 1.0),
@@ -44,7 +48,7 @@ object HIPS {
 
     val M = new PointSet(XYtree)
 
-    val solution = HIPS(M)
+    val compSol = HIPS(M)
 
     val f1 = Figure()
 
@@ -54,7 +58,12 @@ object HIPS {
       ((x: Int) => s.map(_.w).zipWithIndex.map(_.swap).toMap.getOrElse(x, 0.0) / 2.0)
     }
 
-    val allPoints = points.filterNot((solution ++ M.points.toList).contains(_)).toList
+    val compWeight = compSol.map(_.w).sum
+    println("w = " + compWeight + " -> " + compSol.toString)
+
+    val (bfSol, bfWeight) = getBruteforceSolution(M.points.toSeq)
+/*
+    val allPoints = points.filterNot((compSol ++ bfSol).contains(_)).toList
 
     val all = scatter(
       allPoints.map(_.x),
@@ -65,9 +74,9 @@ object HIPS {
 
     p += all
 
-    val common: TreeSet[Pnt] = M.points.intersect(solution.toSet)
-    val computed: TreeSet[Pnt] = M.points.filterNot(common.contains(_))
-    val bruteforce = solution.filterNot(common.contains(_))
+    val common: Set[Pnt] = bfSol.intersect(compSol.toSet)
+    val computed: Set[Pnt] = compSol.toSet.filterNot(common.contains(_))
+    val bruteforce = bfSol.filterNot(common.contains(_))
 
     p += scatter(
       computed.map(_.x).toSeq,
@@ -77,9 +86,9 @@ object HIPS {
     )
 
     p += scatter(
-      bruteforce.map(_.x),
-      bruteforce.map(_.y),
-      weightFunc(bruteforce),
+      bruteforce.map(_.x).toSeq,
+      bruteforce.map(_.y).toSeq,
+      weightFunc(bruteforce.toList),
       (x: Int) => Color.RED
     )
 
@@ -91,33 +100,34 @@ object HIPS {
     )
 
     p.refresh()
+*/
+    if(!increasingPointSet(compSol.toSet))
+      throw new IllegalStateException("Illegal HIPS!")
 
-    val compWeight = solution.map(_.w).sum
-    println("w = " + compWeight + " -> " + solution.toString)
-
-    val expWeight = printSolution(points)
-
-    if(compWeight != expWeight)
-      throw new IllegalStateException("Weights are different: computed vs expected " + compWeight + " vs " + expWeight)
+    if(compWeight != bfWeight)
+      err += 1
+      //throw new IllegalStateException("Weights are different: computed vs expected " + compWeight + " vs " + bfWeight)
   }
 
-  def printSolution[A <: Pnt](points: Seq[A]): Double = {
-    val solutions = points.toSet.subsets
-      .filter(increasingPointSet).toStream
+  def getBruteforceSolution[A <: Pnt](points: Seq[A]): (Set[A], Double) = {
+
+    val solutions = points.toSet.subsets.filter(s => increasingPointSet(s)).toStream
 
     println(solutions.size + "/" + Math.pow(2, points.size).toInt + " increasing subsets")
 
-    val solWeight = solutions.map(x => (x, x.map(_.w).sum))
+    val solWeight = solutions.map(x => (x, x.toList.map(_.w).sum))
+
+    //solWeight.foreach(sw => println(sw._2 + " -> " + sw._1.mkString(", ")))
 
     val maxWeight = solWeight.maxBy(_._2)
 
-    println(solWeight.filter(_._2 == maxWeight._2).mkString("\n"))
+    println("bf --> w = " + maxWeight._2 + " -> " + maxWeight._1.mkString(", "))
 
-    maxWeight._2
+    maxWeight
   }
 
   def increasingPointSet[A <: Pnt](ps: Set[A]): Boolean ={
-    ps.forall(a => !ps.exists(b => b != a && a.x >= b.x && a.y <= b.y))
+    ps.forall(a => ps.filterNot(_ equals a).forall(b => (a.x > b.x && a.y > b.y) || (a.x < b.x && a.y < b.y)))
   }
 
   def HIPS(M: PointSet[Pnt]): List[Pnt] = {
@@ -127,7 +137,7 @@ object HIPS {
     val AQ = ListBuffer[Pnt]()
     val SW: Map[Pnt, Double] = Map[Pnt, Double]()
 
-    println(M.points.mkString(", "))
+    println("Input: " + M.points.mkString(", "))
 
     var currXMaxW: Double = -1
     var i = 0
