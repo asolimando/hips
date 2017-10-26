@@ -10,7 +10,7 @@ package object PntPackage {
 }
 
 object HIPS {
-  val VERBOSE: Boolean = true
+  val VERBOSITY: Int = 1
 
   val pointOrderingX = Ordering.fromLessThan[Pnt](_.x < _.x)
   val pointOrderingXY = Ordering.fromLessThan[Pnt]((a,b) => if(a.x == b.x) a.y < b.y else a.x < b.x)
@@ -26,21 +26,25 @@ object HIPS {
     Point(rnd.nextInt(maxX), rnd.nextInt(maxY), (rnd.nextDouble * maxW).round)
   }
 
+  def time[A](a: => A) = {
+    val now = System.nanoTime
+    val result = a
+    val micros = (System.nanoTime - now) / 1000
+    println("%d microseconds".format(micros))
+    result
+  }
+
   def main(args: Array[String]): Unit = {
-    for(i <- 2 to 2) exec()
+    time{
+      for(i <- 1 to 100000){ exec(); if(i % 10000 == 0) println(i)}
+    }
 
     println(err)
   }
 
   def exec(): Unit ={
     val points: Seq[Pnt] = (1 to 5).map(_ => generatePoint(100,100,10.0))
-    /*    Seq(
-          new Point(0, 1, 2.0),
-          new Point(0, 0, 1.0),
-          new Point(1, 0, 1.0),
-          new Point(2, 1, 2.0)
-        )
-    */
+
     val XYtree = TreeSet.empty(pointOrderingXY)
     val YXtree = TreeSet.empty(pointOrderingYX)
 
@@ -59,7 +63,9 @@ object HIPS {
     }
 
     val compWeight = compSol.map(_.w).sum
-    println("w = " + compWeight + " -> " + compSol.toString)
+
+    if(VERBOSITY > 0)
+      println("w = " + compWeight + " -> " + compSol.toString)
 
     val (bfSol, bfWeight) = getBruteforceSolution(M.points.toSeq)
 /*
@@ -113,15 +119,15 @@ object HIPS {
 
     val solutions = points.toSet.subsets.filter(s => increasingPointSet(s)).toStream
 
-    println(solutions.size + "/" + Math.pow(2, points.size).toInt + " increasing subsets")
+    if(VERBOSITY > 0)
+      println(solutions.size + "/" + Math.pow(2, points.size).toInt + " increasing subsets")
 
     val solWeight = solutions.map(x => (x, x.toList.map(_.w).sum))
 
-    //solWeight.foreach(sw => println(sw._2 + " -> " + sw._1.mkString(", ")))
-
     val maxWeight = solWeight.maxBy(_._2)
 
-    println("bf --> w = " + maxWeight._2 + " -> " + maxWeight._1.mkString(", "))
+    if(VERBOSITY > 0)
+      println("bf --> w = " + maxWeight._2 + " -> " + maxWeight._1.mkString(", "))
 
     maxWeight
   }
@@ -137,7 +143,8 @@ object HIPS {
     val AQ = ListBuffer[Pnt]()
     val SW: Map[Pnt, Double] = Map[Pnt, Double]()
 
-    println("Input: " + M.points.mkString(", "))
+    if(VERBOSITY > 0)
+      println("Input: " + M.points.mkString(", "))
 
     var currXMaxW: Double = -1
     var i = 0
@@ -183,7 +190,7 @@ object HIPS {
                    AQ: Seq[Pnt],
                    SW: Map[Pnt, Double]): Unit ={
 
-    if(VERBOSE){
+    if(VERBOSITY > 1){
       println("S: " + S.points.mkString(", "))
       println("P: " + P.mkString(", "))
       println("AQ: " + AQ.mkString(", "))
@@ -193,7 +200,7 @@ object HIPS {
     for (mu <- AQ) {
       var optSucc: Option[Pnt] = S.successor(P(mu))
 
-      if(VERBOSE){
+      if(VERBOSITY > 1){
         println("mu: " + mu)
         println("succ: " + optSucc)
       }
@@ -217,7 +224,7 @@ object HIPS {
 
     AQ.foreach(S.add)
 
-    if(VERBOSE){
+    if(VERBOSITY > 1){
       println("S: " + S.points.mkString(", "))
       println("AQ: " + AQ.mkString(", "))
     }
@@ -241,10 +248,14 @@ case class PointSet[A <: Pnt](points: TreeSet[A])(implicit cmp: Ordering[A] = po
     */
   def predecessor(curr: A): Option[A] = {
     util.Try({
-      val a = points.iterator.takeWhile(points.ordering.lt(_, curr)).max
+      val comparator = points.ordering
+      val a = points.iterator.takeWhile(comparator.lt(_, curr)).max(comparator)
       val b = points.filter(p => p.x < curr.x && p.y < curr.y).maxBy(_.y)
-      if(a != b) System.exit(-1)
-      a
+      if(a != b) {
+        //System.err.println(a + " " + b)
+//        System.exit(-1)
+      }
+      b
     }).toOption
   }
 
