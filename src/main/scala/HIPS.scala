@@ -36,7 +36,7 @@ object HIPS {
 
   def main(args: Array[String]): Unit = {
     time{
-      for(i <- 1 to 100000){ exec(); if(i % 10000 == 0) println(i)}
+      for(i <- 1 to 100000){ exec(); if(i > 186 || i % 10000 == 0) println(i)}
     }
 
     println(err)
@@ -191,6 +191,7 @@ object HIPS {
     }
 
     for (mu <- AQ) {
+      var optSucc2: Option[Pnt] = S.successor(S.predecessor(mu).getOrElse(null)) // S.successor(P(mu))
       var optSucc: Option[Pnt] = S.successor(P(mu))
 
       if(VERBOSITY > 1){
@@ -210,7 +211,7 @@ object HIPS {
         }
         else {
           S.remove(succ)
-          optSucc = S.successor(succ)
+          optSucc = S.successor(P(mu)) //S.successor(succ)
         }
       }
     }
