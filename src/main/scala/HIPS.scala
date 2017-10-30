@@ -148,15 +148,8 @@ object HIPS {
 
     var currXMaxW: Double = -1
     var i = 0
-    var predX = M.points.head.x
 
     for(sigmai: Pnt <- M.points){
-
-      if(predX != sigmai.x){
-        processQueue(S, P, AQ, SW)
-        currXMaxW = -1
-        AQ.clear
-      }
 
       i = i + 1
       var pred = S.predecessor(sigmai).getOrElse(null)
@@ -175,7 +168,7 @@ object HIPS {
         }
       }
 
-      if(i == M.size){
+      if(i == M.size || M.points.filterNot(_ equals sigmai).keysIteratorFrom(sigmai).next().x != sigmai.x){
         processQueue(S, P, AQ, SW)
         currXMaxW = -1
         AQ.clear
@@ -217,7 +210,7 @@ object HIPS {
         }
         else {
           S.remove(succ)
-          optSucc = S.successor(succ) //S.successor(P(mu))
+          optSucc = S.successor(succ)
         }
       }
     }
