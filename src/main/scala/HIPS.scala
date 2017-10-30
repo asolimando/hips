@@ -36,14 +36,14 @@ object HIPS {
 
   def main(args: Array[String]): Unit = {
     time{
-      for(i <- 1 to 100000){ exec(); if(i > 358 || i % 10000 == 0) println(i)}
+      for(i <- 1 to 100000){ exec(); if(i % 10000 == 0) println(i)}
     }
 
     println(err)
   }
 
   def exec(): Unit ={
-    val points: Seq[Pnt] = (1 to 5).map(_ => generatePoint(100,100,10.0))
+    val points: Seq[Pnt] = (1 to 15).map(_ => generatePoint(100,100,10.0))
 
     val XYtree = TreeSet.empty(pointOrderingXY)
     val YXtree = TreeSet.empty(pointOrderingYX)
@@ -317,7 +317,7 @@ case class Sequence[A <: Pnt](points: Seq[A]) extends Seq[A] {
 }
 
 case class Point[A <% Comparable[A], B <% Comparable[B]](x: A, y: A, w: B) extends Ordered[Point[A,B]] {
-  override def compare(that: Point[A, B]): Int = {
+  override def compare(that: Point[A, B]): Int = { //default XY comparator
     if(this.x != that.x)
       this.x compareTo that.x
     else
