@@ -1,7 +1,6 @@
 import org.scalatest.FunSuite
 
 import org.asolimando.hips._
-import org.asolimando.point.pntpackage.Pnt
 
 class HIPSTester extends FunSuite {
   test("Bruteforce check computed solutions") {
