@@ -5,8 +5,17 @@ import org.asolimando.point.pntpackage.Pnt
 import breeze.plot._
 import java.awt.Color
 
+/**
+  * A visualization class for HIPS over the input set of points.
+  * @param points the input set of points
+  * @param solution the HIPS for the input set of points
+  * @tparam A the point type parameter
+  */
 case class SolutionViz[A <: Pnt](points: Seq[A], solution: Seq[A]) {
 
+  /**
+    * Method displaying the HIPS over the input set of points
+    */
   def visualize(): Unit = {
 
     def weightFunc(s: collection.AbstractSeq[A]): (Int => Double) = {
