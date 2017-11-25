@@ -1,8 +1,8 @@
-package org.asolimando.hips
+package com.github.asolimando.hips
 
-import org.asolimando.point._
-import org.asolimando.point.pntpackage.Pnt
-import org.asolimando.viz.SolutionViz
+import com.github.asolimando.point._
+import com.github.asolimando.point.pntpackage.Pnt
+import com.github.asolimando.viz.SolutionViz
 
 import scala.collection.mutable.{ListBuffer, Map, TreeSet}
 import scala.util.Random
@@ -13,7 +13,6 @@ import scala.util.Random
 object HIPS {
 
   val VERBOSITY: Int = 1
-  val rnd: Random = new Random(2)
 
   /**
     * Method generating a point (x, y, w).
@@ -24,7 +23,8 @@ object HIPS {
     */
   def generatePoint(maxX: Int = Int.MaxValue,
                     maxY: Int = Int.MaxValue,
-                    maxW: Double = Double.MaxValue): Pnt = {
+                    maxW: Double = Double.MaxValue,
+                    rnd: Random): Pnt = {
     Point(rnd.nextInt(maxX), rnd.nextInt(maxY), (rnd.nextDouble * maxW).round)
   }
 
@@ -44,8 +44,10 @@ object HIPS {
 
   def main(args: Array[String]): Unit = {
     time{
+      val rnd = new Random(2)
+
       for(i <- 1 to 10){
-        val points: Seq[Pnt] = (1 to 1500).map(_ => HIPS.generatePoint(1000,1000,100.0))
+        val points: Seq[Pnt] = (1 to 1500).map(_ => HIPS.generatePoint(1000, 1000, 100.0, rnd))
         val solution = exec(points)
         if(i % 10000 == 0) println(i)
 
