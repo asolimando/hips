@@ -1,19 +1,13 @@
 package com.github.asolimando.hips
 
 import com.github.asolimando.point._
-import com.github.asolimando.point.pntpackage.Pnt
+import com.github.asolimando.point.pntpackage.PntID
 import com.github.asolimando.viz.SolutionViz
 
 import scala.collection.mutable.{ListBuffer, Map, TreeSet}
 import scala.util.Random
 
-/**
-  * Heaviest Increasing Point Subset object.
-  */
 object HIPS {
-
-  val VERBOSITY: Int = 1
-
   /**
     * Method generating a point (x, y, w).
     * @param maxX x < maxX
@@ -24,7 +18,7 @@ object HIPS {
   def generatePoint(maxX: Int = Int.MaxValue,
                     maxY: Int = Int.MaxValue,
                     maxW: Double = Double.MaxValue,
-                    rnd: Random): Pnt = {
+                    rnd: Random): PntID = {
     Point(rnd.nextInt(maxX), rnd.nextInt(maxY), (rnd.nextDouble * maxW).round)
   }
 
@@ -42,19 +36,37 @@ object HIPS {
     result
   }
 
+  def apply[A: Ordering, B: Ordering:Monoid]: HIPS[A,B] = new HIPS[A, B]() {}
+
+  val hipsPnt = HIPS[Int, Double]
+
   def main(args: Array[String]): Unit = {
     time{
       val rnd = new Random(2)
 
-      for(i <- 1 to 10){
-        val points: Seq[Pnt] = (1 to 1500).map(_ => HIPS.generatePoint(1000, 1000, 100.0, rnd))
-        val solution = exec(points)
+      (1 to 10).foreach{i =>
+        val points = (1 to 1500).map(_ => generatePoint(1000, 1000, 100.0, rnd))
+        val solution = hipsPnt.exec(points)
         if(i % 10000 == 0) println(i)
 
         SolutionViz(points, solution).visualize
       }
     }
   }
+}
+
+/**
+  * Heaviest Increasing Point Subset object.
+  */
+abstract class HIPS[A:Ordering, B:Monoid:Ordering] {
+
+  type Pnt = Point[A,B]
+
+  val VERBOSITY: Int = 1
+
+  private val mB = implicitly[Monoid[B]]
+  private val oB = implicitly[Ordering[B]]
+  private val oA = implicitly[Ordering[A]]
 
   /**
     * Computes a HIPS from a given set of points.
@@ -63,18 +75,17 @@ object HIPS {
     * @return a HIPS from a given set of points.
     */
   def exec(points: Seq[Pnt], bruteforceCheck: Boolean = false): List[Pnt] ={
+    val pointOrderingXY = implicitly[Ordering[(A,A)]]
 
-    val pointOrderingXY = Ordering.fromLessThan[Pnt]((a,b) => if(a.x == b.x) a.y < b.y else a.x < b.x)
+    val XYtree = TreeSet.empty[Pnt](pointOrderingXY.on(p => (p.x, p.y)))
 
-    val XYtree = TreeSet.empty(pointOrderingXY)
+    points.foreach(XYtree.add)
 
-    points.foreach(XYtree.add(_))
-
-    val M = new PointSet(XYtree)
+    val M = PointSet(XYtree)
 
     val compSol = computeHIPS(M)
 
-    val compWeight = compSol.map(_.w).sum
+    val compWeight = compSol.map(_.w).fold(mB.zero)(mB.op)
 
     if(VERBOSITY > 0)
       println("w = " + compWeight + " -> " + compSol.toString)
@@ -97,14 +108,14 @@ object HIPS {
     * @param points the set of points for which the HIPS is sought
     * @return a HIPS using a bruteforce approach
     */
-  private def getBruteforceSolution(points: Seq[Pnt]): (Set[Pnt], Double) = {
+  private def getBruteforceSolution(points: Seq[Pnt]): (Set[Pnt], B) = {
 
     val solutions = points.toSet.subsets.filter(s => isStrictlyIncreasingPointSet(s)).toStream
 
     if(VERBOSITY > 0)
       println(solutions.size + "/" + Math.pow(2, points.size).toInt + " increasing subsets")
 
-    val solWeight = solutions.map(x => (x, x.toList.map(_.w).sum))
+    val solWeight = solutions.map(x => (x, x.toList.map(_.w).fold(mB.zero)(mB.op)))
 
     val maxWeight = solWeight.maxBy(_._2)
 
@@ -120,7 +131,9 @@ object HIPS {
     * @return true if the set of points is stricly increasing, false otherwise.
     */
   private def isStrictlyIncreasingPointSet(ps: Set[Pnt]): Boolean ={
-    ps.forall(a => ps.filterNot(_ equals a).forall(b => (a.x > b.x && a.y > b.y) || (a.x < b.x && a.y < b.y)))
+    ps.forall(a => ps.filterNot(_ equals a).forall{
+      b => (oA.gt(a.x, b.x) && oA.gt(a.y, b.y)) || (oA.lt(a.x, b.x) && oA.lt(a.y, b.y))
+    })
   }
 
   /**
@@ -128,19 +141,19 @@ object HIPS {
     * @param M the given set of points
     * @return one of the HIPS of the given set of points.
     */
-  def computeHIPS(M: PointSet[Pnt]): List[Pnt] = {
+  def computeHIPS(M: PointSet[A, B]): List[Pnt] = {
 
-    val pointOrderingYX = Ordering.fromLessThan[Pnt]((a,b) => if(a.y == b.y) a.x < b.x else a.y < b.y)
+    val pointOrderingYX:Ordering[Pnt] = implicitly[Ordering[(A,A)]].on(p => (p.y, p.x))
 
+    val S = PointSet[A,B](TreeSet.empty(pointOrderingYX))
     val P = Map[Pnt, Pnt]()
-    val S = new PointSet(TreeSet.empty(pointOrderingYX))
     val AQ = ListBuffer[Pnt]()
-    val SW = Map[Pnt, Double]()
+    val SW = Map[Pnt, B]()
 
     if(VERBOSITY > 0)
       println("Input: " + M.points.mkString(", "))
 
-    var currXMaxW: Double = -1
+    var currXMaxW: B = mB.zero
     var i = 0
 
     for(sigmai <- M.points){
@@ -148,23 +161,23 @@ object HIPS {
       i = i + 1
       var pred = S.predecessor(sigmai).getOrElse(null)
 
-      SW.put(sigmai, SW.get(pred).getOrElse(0.0) + sigmai.w)
+      SW.put(sigmai, mB.op(SW.getOrElse(pred, mB.zero), sigmai.w))
 
       P.put(sigmai, pred)
 
-      if(SW.get(sigmai).get > currXMaxW){
-        currXMaxW = SW.get(sigmai).get
+      if(oB.gteq(SW(sigmai),currXMaxW)){
+        currXMaxW = SW(sigmai)
 
         val succ = S.successor(pred)
 
-        if(!succ.isDefined || sigmai.y < succ.get.y || SW.get(succ.get).get < SW.get(sigmai).get){
+        if(succ.isEmpty || oA.lt(sigmai.y,succ.get.y) || oB.lt(SW(succ.get),SW(sigmai))) {
           AQ += sigmai
         }
       }
 
       if(i == M.size || M.points.filterNot(_ equals sigmai).keysIteratorFrom(sigmai).next().x != sigmai.x){
         processQueue(S, P, AQ, SW)
-        currXMaxW = -1
+        currXMaxW = mB.zero
         AQ.clear
       }
     }
@@ -179,10 +192,10 @@ object HIPS {
     * @param AQ the addition queue to be processed
     * @param SW the (total) weight of each non-dominated partial solution
     */
-  private def processQueue(S: PointSet[Pnt],
-                   P: Map[Pnt, Pnt],
-                   AQ: Seq[Pnt],
-                   SW: Map[Pnt, Double]): Unit ={
+  private def processQueue(S: PointSet[A,B],
+                           P: Map[Pnt, Pnt],
+                           AQ: Seq[Pnt],
+                           SW: Map[Pnt, B]): Unit ={
 
     if(VERBOSITY > 1){
       println("S: " + S.points.mkString(", "))
@@ -206,7 +219,7 @@ object HIPS {
       while(optSucc.isDefined && !break){
         val succ: Pnt = optSucc.get
 
-        if(currSeqWeight < SW.get(succ).get){
+        if(oB.lt(currSeqWeight, SW.get(succ).get)){
           break = true
         }
         else {
@@ -230,7 +243,7 @@ object HIPS {
     * @param P the predecessor map for each element
     * @return (one of) the maximal subset among the non-dominated solutions
     */
-  private def maximalSubset(SW: Map[Pnt, Double], P: Map[Pnt, Pnt]): List[Pnt] =
+  private def maximalSubset(SW: Map[Pnt, B], P: Map[Pnt, Pnt]): List[Pnt] =
     _maximalSubset(P, List(SW.maxBy(_._2)._1))
 
   /**
