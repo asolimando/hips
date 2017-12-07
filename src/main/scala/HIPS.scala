@@ -10,16 +10,13 @@ package object PntPackage {
 }
 
 object HIPS {
-  val VERBOSE: Boolean = false
+  val VERBOSE: Boolean = true
 
   val pointOrderingX = Ordering.fromLessThan[Pnt](_.x < _.x)
   val pointOrderingXY = Ordering.fromLessThan[Pnt]((a,b) => if(a.x == b.x) a.y < b.y else a.x < b.x)
   val pointOrderingYX = Ordering.fromLessThan[Pnt]((a,b) => if(a.y == b.y) a.x < b.x else a.y < b.y)
 
-  val XYtree = TreeSet.empty(pointOrderingXY)
-  val YXtree = TreeSet.empty(pointOrderingYX)
-
-  val rnd = new Random(12)
+  val rnd = new Random(2)
 
   var err = 0
 
@@ -30,7 +27,7 @@ object HIPS {
   }
 
   def main(args: Array[String]): Unit = {
-    for(i <- 1 to 5) exec()
+    for(i <- 2 to 2) exec()
 
     println(err)
   }
@@ -44,6 +41,9 @@ object HIPS {
           new Point(2, 1, 2.0)
         )
     */
+    val XYtree = TreeSet.empty(pointOrderingXY)
+    val YXtree = TreeSet.empty(pointOrderingYX)
+
     points.foreach(p => {XYtree.add(p); YXtree.add(p)})
 
     val M = new PointSet(XYtree)
@@ -105,8 +105,8 @@ object HIPS {
       throw new IllegalStateException("Illegal HIPS!")
 
     if(compWeight != bfWeight)
-      err += 1
-      //throw new IllegalStateException("Weights are different: computed vs expected " + compWeight + " vs " + bfWeight)
+      //err += 1
+      throw new IllegalStateException("Weights are different: computed vs expected " + compWeight + " vs " + bfWeight)
   }
 
   def getBruteforceSolution[A <: Pnt](points: Seq[A]): (Set[A], Double) = {
@@ -200,10 +200,12 @@ object HIPS {
 
       var break: Boolean = false
 
+      val currSeqWeight = SW.get(mu).get
+
       while(optSucc.isDefined && !break){
         val succ: Pnt = optSucc.get
 
-        if(SW.get(mu).get < SW.get(succ).get){
+        if(currSeqWeight < SW.get(succ).get){
           break = true
         }
         else {
@@ -237,7 +239,14 @@ case class PointSet[A <: Pnt](points: TreeSet[A])(implicit cmp: Ordering[A] = po
     * @param curr the current point
     * @return the point having the greatest y component among those strictly lower than that of the current point, if any
     */
-  def predecessor(curr: A): Option[A] = util.Try(points.filter(p => p.x < curr.x && p.y < curr.y).maxBy(_.y)).toOption
+  def predecessor(curr: A): Option[A] = {
+    util.Try({
+      val a = points.iterator.takeWhile(points.ordering.lt(_, curr)).max
+      val b = points.filter(p => p.x < curr.x && p.y < curr.y).maxBy(_.y)
+      if(a != b) System.exit(-1)
+      a
+    }).toOption
+  }
 
   /**
     * Returns the point having the lowest y component among those strictly greater than that of the current point, if any
@@ -245,8 +254,7 @@ case class PointSet[A <: Pnt](points: TreeSet[A])(implicit cmp: Ordering[A] = po
     * @return the point having the lowest y component among those strictly greater than that of the current point, if any
     */
   def successor(curr: A): Option[A] = {
-    //points.keysIteratorFrom(curr).min(cmp)
-    util.Try(if(curr == null || curr.x < 0) points.head else points.filter(p => p.x > curr.x && p.y > curr.y).minBy(_.y)).toOption
+    util.Try(if(curr == null || curr.x < 0) points.head else points.keysIteratorFrom(curr).min(cmp)).toOption
   }
 
   /**
