@@ -217,7 +217,7 @@ object HIPS {
         }
         else {
           S.remove(succ)
-          optSucc = S.successor(succ)
+          optSucc = S.successor(succ) //S.successor(P(mu))
         }
       }
     }
@@ -265,7 +265,7 @@ case class PointSet[A <: Pnt](points: TreeSet[A])(implicit cmp: Ordering[A] = po
     * @return the point having the lowest y component among those strictly greater than that of the current point, if any
     */
   def successor(curr: A): Option[A] = {
-    util.Try(if(curr == null || curr.x < 0) points.head else points.keysIteratorFrom(curr).min(cmp)).toOption
+    util.Try(if(curr == null || curr.x < 0) points.head else points.filterNot(_ equals curr).keysIteratorFrom(curr).min(cmp)).toOption
   }
 
   /**
