@@ -7,6 +7,11 @@ package object pntpackage {
   type Pnt = Point[Int, Double]
 }
 
+/**
+  * A sequence of points.
+  * @param points the points composing the sequence.
+  * @tparam A the point type parameter.
+  */
 case class Sequence[A <: Pnt](points: Seq[A]) extends Seq[A] {
 
   val weight: Double = points.map(_.w).sum
@@ -25,6 +30,14 @@ case class Sequence[A <: Pnt](points: Seq[A]) extends Seq[A] {
   }
 }
 
+/**
+  * A 2D weighted point.
+  * @param x the x component
+  * @param y the y component
+  * @param w the weight
+  * @tparam A the type parameter for the x and y components
+  * @tparam B the type parameter for the weight component
+  */
 case class Point[A <% Comparable[A], B <% Comparable[B]](x: A, y: A, w: B) extends Ordered[Point[A, B]] {
   override def compare(that: Point[A, B]): Int = { //default XY comparator
     if(this.x != that.x)
@@ -34,6 +47,12 @@ case class Point[A <% Comparable[A], B <% Comparable[B]](x: A, y: A, w: B) exten
   }
 }
 
+/**
+  * A set of points.
+  * @param points the points composing the set.
+  * @param cmp the comparator for ordering the points.
+  * @tparam A the point type parameter.
+  */
 case class PointSet[A <: Pnt](points: TreeSet[A])(implicit cmp: Ordering[A] = points.ordering){
 
   /**
