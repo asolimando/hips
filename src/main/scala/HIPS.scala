@@ -36,7 +36,7 @@ object HIPS {
 
   def main(args: Array[String]): Unit = {
     time{
-      for(i <- 1 to 100000){ exec(); if(i > 186 || i % 10000 == 0) println(i)}
+      for(i <- 1 to 100000){ exec(); if(i > 358 || i % 10000 == 0) println(i)}
     }
 
     println(err)
@@ -259,7 +259,14 @@ case class PointSet[A <: Pnt](points: TreeSet[A])(implicit cmp: Ordering[A] = po
     * @return the point having the lowest y component among those strictly greater than that of the current point, if any
     */
   def successor(curr: A): Option[A] = {
-    util.Try(if(curr == null || curr.x < 0) points.head else points.filterNot(_ equals curr).keysIteratorFrom(curr).min(cmp)).toOption
+    util.Try(
+      if(curr == null || curr.x < 0)
+        points.head
+      else
+        points.filterNot(_ equals curr)
+          .keysIteratorFrom(curr)
+          .min(points.ordering)
+    ).toOption
   }
 
   /**
