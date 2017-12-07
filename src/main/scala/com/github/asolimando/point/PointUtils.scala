@@ -1,7 +1,8 @@
-package org.asolimando.point
+package com.github.asolimando.point
+
+import com.github.asolimando.point.pntpackage.Pnt
 
 import scala.collection.mutable.TreeSet
-import pntpackage.Pnt
 
 package object pntpackage {
   type Pnt = Point[Int, Double]

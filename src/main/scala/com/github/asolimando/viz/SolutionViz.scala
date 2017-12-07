@@ -1,9 +1,9 @@
-package org.asolimando.viz
+package com.github.asolimando.viz
 
-import org.asolimando.point.pntpackage.Pnt
+import java.awt.Color
 
 import breeze.plot._
-import java.awt.Color
+import com.github.asolimando.point.pntpackage.Pnt
 
 /**
   * A visualization class for HIPS over the input set of points.
